@@ -4,6 +4,8 @@ import {
   Plus, Trash2, Edit3, Settings, 
   Info, Waves, Mountain, Save, ChevronRight
 } from 'lucide-react';
+import link from 'next/link';
+import { api } from '../lib/api';
 
 // --- Types ---
 
@@ -106,8 +108,29 @@ const WellDesignModule: React.FC = () => {
     setLayers(layers.filter(l => l.id !== id));
   };
 
-  const updateLayer = (id: string, field: keyof LithologyLayer, value: any) => {
+  const updateLayer = (id: string, field: keyof LithologyLayer, value: string | number) => {
     setLayers(layers.map(l => l.id === id ? { ...l, [field]: value } : l));
+  };
+
+  const [isSaving, setIsSaving] = useState(false);
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const formattedLayers = layers.map(l => ({
+        top_depth_ft: l.topDepth,
+        bottom_depth_ft: l.bottomDepth,
+        pore_pressure_ppg: l.properties.pore_pressure,
+        fracture_gradient_ppg: l.properties.fracture_gradient,
+        lithology: l.type
+      }));
+      await api.saveFormation(environment.wellName, formattedLayers);
+      alert('Well design saved successfully!');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to save well design');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -124,8 +147,12 @@ const WellDesignModule: React.FC = () => {
           <h1 className="text-3xl font-bold text-white">Well Environment & Lithology</h1>
           <p className="text-slate-400 mt-2">Define geological layers and thermophysical properties for hydraulic simulation.</p>
         </div>
-        <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-bold transition-all shadow-lg shadow-blue-900/20">
-          <Save className="w-4 h-4" /> Save Configuration
+        <button 
+          onClick={handleSave}
+          disabled={isSaving}
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-6 py-2.5 rounded-lg font-bold transition-all shadow-lg shadow-blue-900/20"
+        >
+          <Save className="w-4 h-4" /> {isSaving ? 'Saving...' : 'Save Design'}
         </button>
       </div>
 
@@ -151,7 +178,7 @@ const WellDesignModule: React.FC = () => {
                 <select 
                   className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm focus:border-blue-500 outline-none"
                   value={environment.location}
-                  onChange={(e) => setEnvironment({...environment, location: e.target.value as any})}
+                  onChange={(e) => setEnvironment({...environment, location: e.target.value as 'onshore' | 'offshore'})}
                 >
                   <option value="offshore">Offshore</option>
                   <option value="onshore">Onshore</option>
@@ -297,7 +324,7 @@ const WellDesignModule: React.FC = () => {
                     type="number"
                     step="0.01"
                     className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-sm text-white focus:border-blue-500 outline-none font-mono"
-                    value={(layers.find(l => l.id === editingLayerId)?.properties as any)[prop.key]}
+                    value={String(layers.find(l => l.id === editingLayerId)?.properties[prop.key as keyof LayerProperties] ?? '')}
                     onChange={(e) => {
                       const newLayers = layers.map(l => {
                         if (l.id === editingLayerId) {

@@ -2,11 +2,11 @@
 import React, { useState } from 'react';
 import { 
   FileText, Download, CheckCircle, 
-  Clock, BarChart2, Activity, Shield 
+  Clock, BarChart2, Activity, Shield, LucideIcon 
 } from 'lucide-react';
-// Note: In a real project, you would import { PDFDownloadLink, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
-// Since I cannot run the actual PDF generation in this sandbox environment, I will provide the structure and the UI.
-
+import { PDFDownloadLink, Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
+import { useLatestMonitoring } from '../hooks/useMPD';
+import { useEffect } from 'react';
 // --- Types ---
 
 interface ReportOption {
@@ -41,37 +41,76 @@ const REPORT_OPTIONS: ReportOption[] = [
   }
 ];
 
-// --- PDF Template Structure (Mock for reference) ---
-/*
-const MPDReportPDF = ({ data }) => (
+// --- PDF Template Structure ---
+const styles = StyleSheet.create({
+  page: { padding: 30, backgroundColor: '#ffffff', fontFamily: 'Helvetica' },
+  header: { marginBottom: 20, borderBottomWidth: 1, borderBottomColor: '#1e293b', paddingBottom: 10 },
+  title: { fontSize: 24, fontWeight: 'bold', color: '#0f172a' },
+  subtitle: { fontSize: 12, color: '#64748b', marginTop: 4 },
+  section: { marginVertical: 10 },
+  sectionTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 8, color: '#3b82f6' },
+  text: { fontSize: 12, color: '#334155', marginBottom: 4 },
+  row: { flexDirection: 'row', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: '#e2e8f0', paddingVertical: 4 },
+  col1: { width: '50%', fontSize: 12, color: '#64748b' },
+  col2: { width: '50%', fontSize: 12, color: '#0f172a', fontWeight: 'bold', textAlign: 'right' }
+});
+
+const MPDReportPDF = ({ data, reportType }: { data: any, reportType: string }) => (
   <Document>
     <Page size="A4" style={styles.page}>
       <View style={styles.header}>
-        <Text style={styles.title}>MPD ANALYTICS SUITE - ENGINEERING REPORT</Text>
-        <Text style={styles.subtitle}>Well: {data.wellName} | Date: {new Date().toLocaleDateString()}</Text>
+        <Text style={styles.title}>MPD ANALYTICS SUITE</Text>
+        <Text style={styles.subtitle}>{reportType.toUpperCase()} | Well: WELL-A1 | Date: {new Date().toLocaleDateString()}</Text>
       </View>
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>1. Executive Summary</Text>
-        <Text style={styles.text}>Current Depth: {data.depth} ft</Text>
-        <Text style={styles.text}>Average ECD: {data.ecd} ppg</Text>
+        <Text style={styles.sectionTitle}>1. Current Well Status</Text>
+        <View style={styles.row}>
+          <Text style={styles.col1}>Measured Depth</Text>
+          <Text style={styles.col2}>12500 ft</Text>
+        </View>
+        <View style={styles.row}>
+          <Text style={styles.col1}>Alert Status</Text>
+          <Text style={styles.col2}>{data?.alert_status?.toUpperCase() || 'N/A'}</Text>
+        </View>
+      </View>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>2. Hydraulic Parameters</Text>
+        <View style={styles.row}>
+          <Text style={styles.col1}>Flow Rate (GPM)</Text>
+          <Text style={styles.col2}>{data?.pump_rate_gpm?.toFixed(1) || 'N/A'}</Text>
+        </View>
+        <View style={styles.row}>
+          <Text style={styles.col1}>Bottom Hole Pressure (PSI)</Text>
+          <Text style={styles.col2}>{data?.bhp_psi?.toFixed(1) || 'N/A'}</Text>
+        </View>
+        <View style={styles.row}>
+          <Text style={styles.col1}>Equivalent Circulating Density (PPG)</Text>
+          <Text style={styles.col2}>{data?.ecd_ppg?.toFixed(2) || 'N/A'}</Text>
+        </View>
+        <View style={styles.row}>
+          <Text style={styles.col1}>Surface Backpressure / Choke (PSI)</Text>
+          <Text style={styles.col2}>{data?.surface_backpressure_psi?.toFixed(1) || 'N/A'}</Text>
+        </View>
+      </View>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>3. Engineering Analysis</Text>
+        <Text style={styles.text}>
+          This report was generated automatically. 
+          The ECD remains {data?.alert_status === 'normal' ? 'within' : 'outside'} the safe operating window.
+        </Text>
       </View>
     </Page>
   </Document>
 );
-*/
 
 const ReportsModule: React.FC = () => {
   const [selectedReport, setSelectedReport] = useState<string | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
-
-  const handleExport = () => {
-    setIsGenerating(true);
-    // Simulate PDF generation delay
-    setTimeout(() => {
-      setIsGenerating(false);
-      alert(`Exporting ${selectedReport?.toUpperCase()} as PDF...`);
-    }, 2000);
-  };
+  const { data: latestData } = useLatestMonitoring("WELL-A1");
+  const [isClient, setIsClient] = useState(false);
+  
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 p-8 font-sans">
@@ -149,27 +188,35 @@ const ReportsModule: React.FC = () => {
                 </div>
 
                 <div className="pt-6 border-t border-slate-800">
-                  <button 
-                    disabled={!selectedReport || isGenerating}
-                    onClick={handleExport}
-                    className={`w-full py-4 rounded-xl font-bold flex items-center justify-center gap-3 transition-all ${
-                      !selectedReport 
-                        ? 'bg-slate-800 text-slate-600 cursor-not-allowed' 
-                        : 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-900/20 active:scale-[0.98]'
-                    }`}
-                  >
-                    {isGenerating ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                        Generating PDF...
-                      </>
-                    ) : (
-                      <>
-                        <Download className="w-5 h-5" />
-                        Export PDF Report
-                      </>
-                    )}
-                  </button>
+                  {isClient && selectedReport ? (
+                    <PDFDownloadLink
+                      document={<MPDReportPDF data={latestData} reportType={REPORT_OPTIONS.find(r => r.id === selectedReport)?.title || "Report"} />}
+                      fileName={`MPD_${selectedReport}_${new Date().toISOString().split('T')[0]}.pdf`}
+                      className="w-full py-4 rounded-xl font-bold flex items-center justify-center gap-3 transition-all bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-900/20 active:scale-[0.98]"
+                    >
+                      {({ loading }) =>
+                        loading ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                            Generating PDF...
+                          </>
+                        ) : (
+                          <>
+                            <Download className="w-5 h-5" />
+                            Export PDF Report
+                          </>
+                        )
+                      }
+                    </PDFDownloadLink>
+                  ) : (
+                    <button 
+                      disabled={true}
+                      className="w-full py-4 rounded-xl font-bold flex items-center justify-center gap-3 transition-all bg-slate-800 text-slate-600 cursor-not-allowed"
+                    >
+                      <Download className="w-5 h-5" />
+                      Select a report to export
+                    </button>
+                  )}
                   <p className="text-[10px] text-slate-600 text-center mt-4 uppercase tracking-tighter">
                     Reports are generated in high-resolution A4 format
                   </p>

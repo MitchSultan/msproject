@@ -39,11 +39,14 @@ function usePolling<T>(
   const [data, setData] = useState<T | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // Memoize the fetcher using the caller's dependencies
+  const memoizedFetcher = useCallback(fetcher, deps);
 
   const fetch = useCallback(async () => {
     try {
-      const result = await fetcher()
+      setLoading(true)
+      const result = await memoizedFetcher()
       setData(result)
       setError(null)
     } catch (e) {
@@ -51,21 +54,46 @@ function usePolling<T>(
     } finally {
       setLoading(false)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps)
+  }, [memoizedFetcher])
 
   useEffect(() => {
-    setLoading(true)
-    fetch()
+    let isMounted = true;
+    let timer: any = null;
 
-    if (pollInterval) {
-      timerRef.current = setInterval(fetch, pollInterval)
-    }
+    const tick = async () => {
+      if (!isMounted) return;
+      try {
+        setLoading(true);
+        const result = await memoizedFetcher();
+        if (isMounted) {
+          setData(result);
+          setError(null);
+          // If successful, continue polling
+          if (pollInterval) {
+            timer = setTimeout(tick, pollInterval);
+          }
+        }
+      } catch (e) {
+        if (isMounted) {
+          setError(e instanceof Error ? e.message : "Unknown error");
+          // On network failure, we pause polling for a much longer time to prevent console spam
+          if (pollInterval) {
+            timer = setTimeout(tick, Math.max(pollInterval * 4, 20000));
+          }
+        }
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    // Initial fetch
+    tick();
 
     return () => {
-      if (timerRef.current) clearInterval(timerRef.current)
+      isMounted = false;
+      if (timer) clearTimeout(timer);
     }
-  }, [fetch, pollInterval])
+  }, [memoizedFetcher, pollInterval])
 
   return { data, loading, error, refetch: fetch }
 }
@@ -79,10 +107,15 @@ export function useWells(): FetchState<Well[]> {
   return usePolling(() => api.wells(), [])
 }
 
-/** Single well metadata */
+/**
+ * Single well metadata
+ */
 export function useWell(wellId: string | null): FetchState<Well> {
   return usePolling(
-    () => api.well(wellId!),
+    () => {
+      if (!wellId) return Promise.reject(new Error('wellId is required'))
+      return api.well(wellId)
+    },
     [wellId],
   )
 }
@@ -96,7 +129,10 @@ export function useLatestMonitoring(
   pollInterval = 5000,
 ): FetchState<MonitoringPoint> {
   return usePolling(
-    () => api.latestMonitoring(wellId!),
+    () => {
+      if (!wellId) return Promise.reject(new Error('wellId is required'))
+      return api.latestMonitoring(wellId)
+    },
     [wellId],
     wellId ? pollInterval : undefined,
   )
@@ -111,7 +147,10 @@ export function useLiveSeries(
   { limit = 100, pollInterval = 5000 } = {},
 ): FetchState<MonitoringPoint[]> {
   return usePolling(
-    () => api.liveMonitoring(wellId!, limit),
+    () => {
+      if (!wellId) return Promise.reject(new Error('wellId is required'))
+      return api.liveMonitoring(wellId, limit)
+    },
     [wellId, limit],
     wellId ? pollInterval : undefined,
   )
@@ -122,7 +161,10 @@ export function useSimulations(
   wellId: string | null,
 ): FetchState<SimulationResult[]> {
   return usePolling(
-    () => api.simulations(wellId!),
+    () => {
+      if (!wellId) return Promise.reject(new Error('wellId is required'))
+      return api.simulations(wellId)
+    },
     [wellId],
   )
 }
@@ -132,7 +174,10 @@ export function useOperatingWindow(
   wellId: string | null,
 ): FetchState<OperatingWindowData> {
   return usePolling(
-    () => api.operatingWindow(wellId!),
+    () => {
+      if (!wellId) return Promise.reject(new Error('wellId is required'))
+      return api.operatingWindow(wellId)
+    },
     [wellId],
   )
 }

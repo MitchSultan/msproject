@@ -1,14 +1,13 @@
 import React from 'react';
-import MPDDashboard from './npm-model/page';
-import MPDHero from './components/hero';
+import Banner  from './components/Banner';
 
 
 
-export default function page() {
+export default async function page() {
+ 
   return (
     <div>
-      <MPDHero />
-      <MPDDashboard />
+      <Banner/>
       
       
     </div>

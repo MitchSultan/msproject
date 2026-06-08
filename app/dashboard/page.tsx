@@ -24,6 +24,7 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from "recharts"
+import type { TooltipProps } from "recharts"
 import {
   useLatestMonitoring,
   useLiveSeries,

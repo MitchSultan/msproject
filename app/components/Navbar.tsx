@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Menu, X, BarChart3, Gauge, Layout, Droplet, Activity, FileText } from 'lucide-react'
+import { Menu, X, Gauge, Layout, Droplet, Activity, FileText } from 'lucide-react'
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
@@ -11,10 +11,9 @@ export default function Navbar() {
 
   const navItems = [
     { href: '/', label: 'Home', icon: Layout },
-    { href: '/dashboard', label: 'Dashboard', icon: BarChart3 },
     { href: '/well-design', label: 'Well Design', icon: Droplet },
     { href: '/hydraulic-analysis', label: 'Hydraulic Analysis', icon: Gauge },
-    { href: '/real-time', label: 'Live Monitoring', icon: Activity },
+    { href: '/real-dashboard', label: 'Live Monitoring', icon: Activity },
     { href: '/reports', label: 'Reports', icon: FileText },
   ]
 

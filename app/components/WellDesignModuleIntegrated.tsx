@@ -88,7 +88,7 @@ const WellDesignModuleIntegrated: React.FC = () => {
     setLayers(layers.filter(l => l.id !== id));
   };
 
-  const updateLayer = (id: string, field: keyof LithologyLayer, value: any) => {
+  const updateLayer = (id: string, field: keyof LithologyLayer, value: string | number) => {
     setLayers(layers.map(l => l.id === id ? { ...l, [field]: value } : l));
   };
 
@@ -132,7 +132,7 @@ const WellDesignModuleIntegrated: React.FC = () => {
                 <select 
                   className="w-full bg-slate-950 border border-slate-800 rounded-md px-3 py-2 text-sm focus:border-blue-500 outline-none"
                   value={environment.location}
-                  onChange={(e) => setEnvironment({...environment, location: e.target.value as any})}
+                  onChange={(e) => setEnvironment({...environment, location: e.target.value as 'onshore' | 'offshore'})}
                 >
                   <option value="offshore">Offshore</option>
                   <option value="onshore">Onshore</option>
@@ -160,8 +160,8 @@ const WellDesignModuleIntegrated: React.FC = () => {
             </div>
           </div>
 
-          {/* Integrated Visualization Component */}
-          <WellVisualization layers={layers} />
+          {/* Integrated Visualization Component - TODO: Implement WellVisualization */}
+          {/* <WellVisualization layers={layers} /> */}
         </div>
 
         {/* Main Content: Lithology Table */}
@@ -264,7 +264,7 @@ const WellDesignModuleIntegrated: React.FC = () => {
               <p className="text-xs text-slate-300 font-bold uppercase mb-1">Dynamic Synchronization Active</p>
               <p className="text-[11px] text-slate-500 leading-relaxed">
                 Changes to the lithology table are reflected instantly in the vertical profile visualization on the left. 
-                For offshore wells, updating the 'Water Depth' will automatically adjust the thickness of the seawater layer.
+                For offshore wells, updating the &quot;Water Depth&quot; will automatically adjust the thickness of the seawater layer.
               </p>
             </div>
           </div>
@@ -297,7 +297,7 @@ const WellDesignModuleIntegrated: React.FC = () => {
                     type="number"
                     step="0.01"
                     className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-sm text-white focus:border-blue-500 outline-none font-mono"
-                    value={(layers.find(l => l.id === editingLayerId)?.properties as any)[prop.key]}
+                    value={String(layers.find(l => l.id === editingLayerId)?.properties[prop.key as keyof LayerProperties] ?? '')}
                     onChange={(e) => {
                       const newLayers = layers.map(l => {
                         if (l.id === editingLayerId) {

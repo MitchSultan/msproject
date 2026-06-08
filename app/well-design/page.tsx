@@ -1,11 +1,11 @@
 import React from 'react'
 import Navbar from '../components/Navbar'
-import WellDesignModule from '../components/WellDesignModule'
+import WellsDashboard  from '../components/wells'
 
 export default function page() {
   return (
     <div>
-        <WellDesignModule />
+        <WellsDashboard />
     </div>
   )
 }

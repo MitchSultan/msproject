@@ -2,12 +2,13 @@
 import React, { useState, useEffect } from 'react';
 import {
   LineChart, Line, AreaChart, Area, XAxis, YAxis,
-  CartesianGrid, Tooltip, Legend, ResponsiveContainer
+  CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 import {
   Activity, Gauge, Thermometer, Droplets,
   AlertTriangle, CheckCircle, Navigation, Layers
 } from 'lucide-react';
+import { api } from '../lib/api';
 
 // --- Types ---
 
@@ -29,24 +30,17 @@ interface CurrentStats {
   status: 'normal' | 'warning' | 'danger';
 }
 
-// --- Mock Data Generator (Simulating Backend) ---
-
-const generateChartData = (currentDepth: number): WellData[] => {
-  return Array.from({ length: 20 }, (_, i) => {
-    const depth = (currentDepth - 2000) + (i * 100);
-    return {
-      depth,
-      bhp: 7000 + (depth * 0.052 * 11.5) + (Math.random() * 50),
-      pore_pressure: 7000 + (depth * 0.052 * 10.8),
-      fracture_gradient: 7000 + (depth * 0.052 * 13.2),
-      ecd: 11.5 + (Math.random() * 0.2)
-    };
-  });
-};
-
 // --- Sub-Components ---
 
-const StatCard = ({ title, value, unit, icon: Icon, color }: any) => (
+interface StatCardProps {
+  title: string;
+  value: number | string;
+  unit: string;
+  icon: React.ComponentType<{ className?: string }>;
+  color: string;
+}
+
+const StatCard = ({ title, value, unit, icon: Icon, color }: StatCardProps) => (
   <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-sm">
     <div className="flex justify-between items-start mb-2">
       <span className="text-slate-400 text-xs font-medium uppercase tracking-wider">{title}</span>
@@ -92,20 +86,49 @@ const MPDDashboard: React.FC = () => {
   const [chartData, setChartData] = useState<WellData[]>([]);
 
   useEffect(() => {
-    setChartData(generateChartData(stats.depth));
-    
-    // Simulate real-time updates
-    const interval = setInterval(() => {
-      setStats(prev => ({
-        ...prev,
-        bhp: prev.bhp + (Math.random() * 10 - 5),
-        chokePressure: prev.chokePressure + (Math.random() * 4 - 2),
-        status: Math.random() > 0.9 ? 'warning' : 'normal'
-      }));
-    }, 3000);
+    const wellId = "WELL-A1"; // default well for dashboard
 
+    const fetchData = async () => {
+      try {
+        const [latest, windowData] = await Promise.all([
+          api.latestMonitoring(wellId).catch(() => null),
+          api.operatingWindow(wellId).catch(() => null)
+        ]);
+        
+        if (latest) {
+          setStats({
+            depth: 12500, // static for now or fetch from well
+            flowRate: latest.pump_rate_gpm ?? 600,
+            mudWeight: latest.mud_weight_ppg ?? 11.2,
+            chokePressure: latest.surface_backpressure_psi ?? 450,
+            bhp: latest.bhp_psi ?? 7850,
+            ecd: latest.ecd_ppg ?? 11.8,
+            status: latest.alert_status as any
+          });
+        }
+        
+        if (windowData && windowData.formation && windowData.formation.length > 0) {
+          const processedData: WellData[] = windowData.formation.map((f: any) => {
+             const sim = windowData.simulations?.find((s: any) => Math.abs(s.bit_depth_ft - f.depth_ft) < 500);
+             return {
+                depth: f.depth_ft,
+                bhp: sim ? sim.bhp_psi : (f.depth_ft * 0.052 * 11.5),
+                pore_pressure: f.depth_ft * 0.052 * f.pore_pressure_ppg,
+                fracture_gradient: f.depth_ft * 0.052 * f.fracture_gradient_ppg,
+                ecd: sim ? sim.ecd_ppg : 11.5
+             };
+          });
+          setChartData(processedData);
+        }
+      } catch (err) {
+        console.error("Dashboard fetch error", err);
+      }
+    };
+    
+    fetchData();
+    const interval = setInterval(fetchData, 3000);
     return () => clearInterval(interval);
-  }, [stats.depth]);
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 p-6 font-sans">

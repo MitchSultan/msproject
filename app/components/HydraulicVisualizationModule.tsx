@@ -8,6 +8,7 @@ import {
   Activity, ShieldAlert, Gauge, ArrowDownToLine, 
   Zap, Info, TrendingUp 
 } from 'lucide-react';
+import { api } from '../lib/api';
 
 // --- Types ---
 
@@ -38,43 +39,39 @@ const HydraulicVisualizationModule: React.FC<HydraulicVisualizationProps> = ({
   surfaceBackpressure 
 }) => {
   
-  // --- Simulation Logic ---
-  // We generate a high-resolution data set for the charts
+  const [windowData, setWindowData] = React.useState<any>(null);
+
+  React.useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const data = await api.operatingWindow("WELL-A1");
+        if (data && data.formation && data.formation.length > 0) {
+          setWindowData(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch window data", err);
+      }
+    };
+    fetchData();
+  }, []);
+
   const pressureProfileData = useMemo(() => {
-    const data = [];
-    if (!layers || layers.length === 0) return data;
-    const totalDepth = Math.max(...layers.map((l) => l.bottomDepth));
-    const step = totalDepth / 50;
-
-    for (let depth = 0; depth <= totalDepth; depth += step) {
-      const currentLayer = layers.find(l => depth >= l.topDepth && depth <= l.bottomDepth) || layers[layers.length - 1];
-      
-      // Hydrostatic Pressure (psi) = 0.052 * mud_density * depth
-      const hydrostatic = 0.052 * mudDensity * depth;
-      
-      // Simulated Friction Loss (simplified model)
-      // Friction increases with depth and flow rate
-      const frictionLoss = (0.00005 * flowRate * mudDensity * depth);
-      
-      // Bottom Hole Pressure (BHP) = Hydrostatic + Friction + Surface Backpressure
-      const bhp = hydrostatic + frictionLoss + surfaceBackpressure;
-      
-      // Equivalent Circulating Density (ECD) = BHP / (0.052 * depth)
-      const ecd = depth > 0 ? bhp / (0.052 * depth) : mudDensity;
-
-      data.push({
-        depth: Math.round(depth),
-        hydrostatic: Math.round(hydrostatic),
-        bhp: Math.round(bhp),
-        ecd: parseFloat(ecd.toFixed(2)),
-        pore_pressure_psi: Math.round(0.052 * currentLayer.properties.pore_pressure * depth),
-        frac_gradient_psi: Math.round(0.052 * currentLayer.properties.fracture_gradient * depth),
-        pore_pressure_ppg: currentLayer.properties.pore_pressure,
-        frac_gradient_ppg: currentLayer.properties.fracture_gradient,
-      });
-    }
-    return data;
-  }, [layers, mudDensity, flowRate, surfaceBackpressure]);
+    if (!windowData) return [];
+    
+    return windowData.formation.map((f: any) => {
+      const sim = windowData.simulations?.find((s: any) => Math.abs(s.bit_depth_ft - f.depth_ft) < 500);
+      return {
+        depth: f.depth_ft,
+        hydrostatic: f.depth_ft * 0.052 * mudDensity,
+        bhp: sim ? sim.bhp_psi : (f.depth_ft * 0.052 * mudDensity) + surfaceBackpressure,
+        ecd: sim ? parseFloat(sim.ecd_ppg.toFixed(2)) : mudDensity,
+        pore_pressure_psi: Math.round(0.052 * f.pore_pressure_ppg * f.depth_ft),
+        frac_gradient_psi: Math.round(0.052 * f.fracture_gradient_ppg * f.depth_ft),
+        pore_pressure_ppg: f.pore_pressure_ppg,
+        frac_gradient_ppg: f.fracture_gradient_ppg,
+      };
+    });
+  }, [windowData, mudDensity, surfaceBackpressure]);
 
   const lastDataPoint = pressureProfileData.length > 0 ? pressureProfileData[pressureProfileData.length - 1] : null;
 

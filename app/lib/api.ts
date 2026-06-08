@@ -44,6 +44,23 @@ export interface SimulationInput {
   simulation_type?: "static" | "dynamic" | "transient"
 }
 
+export interface FormationLayer {
+  top_depth_ft: number
+  bottom_depth_ft: number
+  pore_pressure_ppg: number
+  fracture_gradient_ppg: number
+  lithology?: string | null
+}
+
+export interface RealtimeSimulatorInput {
+  flow_rate_gpm: number
+  mud_weight_ppg: number
+  bit_depth_ft: number
+  duration_sec: number
+  interval_sec: number
+  simulation_type: string
+}
+
 export interface SimulationResult {
   id: string
   well_id: string
@@ -169,5 +186,26 @@ export const api = {
   /** MPD operating window data (formation + simulation overlay) */
   operatingWindow(wellId: string): Promise<OperatingWindowData> {
     return request(`/wells/${wellId}/window`)
+  },
+
+  /** Save formation lithology layers */
+  saveFormation(wellId: string, layers: FormationLayer[]): Promise<{ status: string, inserted: number }> {
+    return request(`/wells/${wellId}/formation`, {
+      method: "POST",
+      body: JSON.stringify({ layers }),
+    })
+  },
+
+  /** Get formation data */
+  getFormation(wellId: string): Promise<any[]> {
+    return request(`/wells/${wellId}/formation`)
+  },
+
+  /** Trigger realtime data simulation */
+  simulateRealtime(wellId: string, payload: RealtimeSimulatorInput): Promise<{ status: string }> {
+    return request(`/wells/${wellId}/simulate-realtime`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    })
   },
 }
