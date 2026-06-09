@@ -1,12 +1,12 @@
 import React from 'react'
 import Navbar from '../components/Navbar'
-import Dashboard from '../components/Dashboard'
-import WellsDashboard from '../components/wells' 
+import WellsDashboard from '../components/WellsDashboard' 
 
 
 export default function page() {
   return (
     <div>
+      <Navbar/>
       <WellsDashboard />
     </div>
   )

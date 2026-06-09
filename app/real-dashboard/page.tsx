@@ -224,7 +224,7 @@ export default function RealTimeDashboard() {
                 contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px' }}
                 itemStyle={{ fontSize: '12px', padding: '2px 0' }}
                 labelStyle={{ color: '#94a3b8', marginBottom: '8px', borderBottom: '1px solid #1e293b', paddingBottom: '4px' }}
-                formatter={(value: number, name: string) => [`${value.toFixed(2)} ppg`, name]}
+               
                 labelFormatter={(label) => `Depth: ${label} ft`}
               />
 

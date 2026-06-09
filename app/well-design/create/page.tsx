@@ -43,18 +43,30 @@ const DEFAULT_WELL_DATA: CompleteWellDesign = {
     total_depth: null,
     kickoff_depth: null,
     target_depth: null,
+    drill_pipe_od_in: 0,   
+    drill_pipe_id_in: 0,   
   },
   hole_sections: [],
   casing_design: [],
   formation_data: {
+    
     formation_top: null,
     formation_bottom: null,
     pore_pressure_gradient: null,
     fracture_gradient: null,
+      formation_top_m: null,                    // renamed + _m suffix
+  formation_bottom_m: null,                 // renamed + _m suffix
+  pore_pressure_psi_per_ft: null,           // renamed
+  fracture_gradient_psi_per_ft: null,
     lithology: "",
   },
   mud_program: {
     mud_type: "Water Based",
+  density_ppg: null,                 // renamed
+  viscosity_cp: null,                // renamed
+  yield_point_lbf100ft2: null,       // renamed
+  solid_content_pct: null,           // renamed
+  flow_rate_gpm: null,  
     density: null,
     viscosity: null,
     yield_point: null,
@@ -424,6 +436,7 @@ function HoleSectionsStep({
         top_depth: null,
         bottom_depth: null,
         hole_size: null,
+        hole_size_in: null,
         mud_type: "",
       },
     ]);
@@ -539,6 +552,9 @@ function CasingDesignStep({
         outer_diameter: null,
         inner_diameter: null,
         weight: null,
+        outer_diameter_in: null,
+        inner_diameter_in: null,
+        weight_lbft: null,
         grade: "",
       },
     ]);
